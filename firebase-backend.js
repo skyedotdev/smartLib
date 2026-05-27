@@ -108,8 +108,8 @@ async function bootstrapFromFirestore() {
   console.log('[SmartLib] Firestore bootstrap complete.');
 
   // Now that real data is loaded, run the startup renders
-  if (typeof refreshSessionUI === 'function') refreshSessionUI();
-  if (typeof filterCatalog === 'function') filterCatalog();
+  refreshSessionUI();
+  filterCatalog();
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -628,12 +628,6 @@ window.handleRegisterSubmit = async function () {
   if (!isValidUnivEmail(email)) {
     showAlert('Invalid email: Only university email addresses are accepted.', 'error'); return;
   }
-  if (role === 'Admin') {
-    showAlert('Administrator accounts cannot be self-registered.', 'error'); return;
-  }
-  if (role === 'Librarian') {
-    showAlert('Librarian accounts must be provisioned by a system administrator.', 'error'); return;
-  }
   if (password.length < 8) { showAlert('Password must be at least 8 characters.', 'error'); return; }
   if (password !== confirm) { showAlert('Passwords do not match.', 'error'); return; }
 
@@ -1054,7 +1048,7 @@ window.libDeleteRoomBooking = async function (resId) {
 // Run bootstrap after DOM is ready (same timing as the original DOMContentLoaded)
 window.addEventListener('load', () => {
   bootstrapFromFirestore().then(() => {
-    if (typeof setDefaultDate === 'function') setDefaultDate();
+    setDefaultDate();
     // Restore session from sessionStorage if user refreshed the page
     const saved = sessionStorage.getItem('nu_active_session');
     if (saved) {
@@ -1063,15 +1057,7 @@ window.addEventListener('load', () => {
       if (role === 'Student')        attachStudentListeners(window.currentSession.email);
       else if (role === 'Librarian') attachLibrarianListeners();
       else if (role === 'Admin')     attachAdminListeners();
-      if (typeof refreshSessionUI === 'function') refreshSessionUI();
     }
-  }).catch(err => {
-    console.error('[SmartLib] Firebase failed:', err);
-    // Force splash away so app is usable even if Firebase errors
-    const splash = document.getElementById('welcome-splash');
-    const app    = document.getElementById('main-app-container');
-    if (splash) splash.classList.add('splash-fade-out');
-    if (app)    app.classList.remove('app-dimmed');
   });
 });
 
