@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartLib – National University Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<link rel="stylesheet" href="styles.css">
+
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="welcome-splash" class="splash-overlay">
+  <div class="splash-content">
+    <div class="splash-crest-frame">
+<div class="splash-crest-inner"><img src="nu-logo.png" style="width:100px;height:100px;object-fit:contain;"></div>
+    </div>
+    <div class="splash-divider"></div>
+    <p class="splash-subtitle">Smart<span style="color:var(--nu-gold);font-weight:800;">Lib</span> &nbsp;·&nbsp; Modernized Library Ecosystem</p>
+    <h1 class="splash-title">NATIONAL <span>UNIVERSITY</span></h1>
+    <div class="splash-spinner"></div>
+    <p class="splash-loading-text">Initializing secure gateway…</p>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="alert-banner" class="alert-toast hidden"><span id="alert-banner-msg"></span><button onclick="document.getElementById('alert-banner').classList.add('hidden')" style="background:none;border:none;color:inherit;font-size:1.1rem;cursor:pointer;margin-left:.75rem;opacity:.8;line-height:1;flex-shrink:0;" title="Dismiss">✕</button></div>
+
+<!-- SIDEBAR OVERLAY BACKDROP -->
+<div id="sidebar-backdrop" class="sidebar-backdrop" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside id="app-sidebar" class="app-sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">
+      <img src="nu-logo.png" style="width:34px;height:34px;object-fit:contain;">
+      <div>
+        <div class="sidebar-logo-text">Smart<span>Lib</span></div>
+        <div class="sidebar-logo-sub">National University</div>
+      </div>
+    </div>
+    <button class="sidebar-close-btn" onclick="closeSidebar()" title="Close">✕</button>
+  </div>
+  <nav class="sidebar-nav" id="sidebar-nav-content"></nav>
+  <div class="sidebar-footer" id="sidebar-footer">
+    <div id="sidebar-user-info" class="sidebar-user-info" style="display:none;">
+      <div class="sidebar-avatar" id="sidebar-avatar-letters">NU</div>
+      <div>
+        <div class="sidebar-username" id="sidebar-username">User</div>
+        <div class="sidebar-userrole" id="sidebar-userrole">Role</div>
+      </div>
+    </div>
+    <button onclick="logoutSession();closeSidebar();" class="sidebar-logout-btn" id="sidebar-logout-btn" style="display:none;">⏻ Log Out</button>
+  </div>
+</aside>
+
+<!-- APP -->
+<div id="main-app-container" class="app-container app-dimmed">
+
+  <!-- NAVBAR -->
+  <header class="main-navbar">
+    <!-- LEFT: hamburger + branding -->
+    <div class="nav-left-group">
+      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleSidebar()" title="Menu" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nu-branding-badge" onclick="navMenuGo('catalog-view')">
+        <div class="nu-mini-crest"><img src="nu-logo.png" style="width:32px;height:32px;object-fit:contain;"></div>
+        <div>
+          <div class="logo-text">Smart<span class="gold-text">Lib</span></div>
+          <div class="logo-subtext">National University</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden tab buttons kept for JS compatibility -->
+    <nav class="nav-tabs-group" style="display:none;">
+      <button onclick="switchView('catalog-view')" id="tab-catalog" class="tab-btn active">📚 Catalog</button>
+      <button onclick="checkAuthAndNavigate('student-view')" id="tab-student" class="tab-btn hidden">🎯 Student</button>
+      <button onclick="checkAuthAndNavigate('librarian-view')" id="tab-librarian" class="tab-btn hidden">💼 Librarian</button>
+      <button onclick="checkAuthAndNavigate('admin-view')" id="tab-admin" class="tab-btn hidden">⚙️ Admin</button>
+    </nav>
+
+    <!-- RIGHT: dark mode + profile/login -->
+    <div class="nav-right-group">
+      <div class="darkmode-toggle-wrap">
+        <span class="darkmode-label" id="darkmode-label">Light</span>
+        <label class="darkmode-switch" title="Toggle Dark Mode">
+          <input type="checkbox" id="darkmode-checkbox" onchange="toggleDarkMode()">
+          <span class="darkmode-slider"></span>
+        </label>
+      </div>
+      <div id="user-profile-badge" class="profile-badge hidden">
+        <div class="user-avatar" id="avatar-letters">NU</div>
+        <div>
+          <div id="badge-username" class="username">User</div>
+          <div id="badge-userrole" class="userrole">Role</div>
+        </div>
+      </div>
+      <button id="login-trigger-btn" onclick="openLoginDrawer()" class="btn btn-gold">Sign In (CAS)</button>
+    </div>
+  </header>
+
+  <main class="content-container">
+
+    <!-- ═══════════════ CATALOG VIEW ═══════════════ -->
+    <section id="catalog-view" class="view-section active">
+      <div class="section-intro">
+        <h1>Explore the NU Knowledge Base</h1>
+        <p>Search physical holdings and digital research assets. Public discovery mode is active — no login required.</p>
+      </div>
+      <div class="search-box-container">
+        <div class="search-input-box">
+          <input type="text" id="search-input" placeholder="Search by title, author, or ISBN…" oninput="filterCatalog()">
+        </div>
+        <div class="filter-dropdown-box">
+          <select id="type-filter" onchange="filterCatalog()">
+            <option value="ALL">All Items</option>
+            <option value="PHYSICAL">📚 Physical Books</option>
+            <option value="DIGITAL">💻 Digital Papers</option>
+          </select>
+        </div>
+      </div>
+      <div id="catalog-grid" class="catalog-display-grid"></div>
+    </section>
+
+    <!-- ═══════════════ STUDENT VIEW ═══════════════ -->
+    <section id="student-view" class="view-section">
+
+      <!-- GREETING — always visible -->
+      <div class="role-greeting" id="student-greeting">
+        <div class="greeting-avatar-wrap">
+          <div class="greeting-avatar" id="greeting-avatar-stu">NU</div>
+        </div>
+        <div class="greeting-body">
+          <h1 id="greeting-name-stu">Welcome back!</h1>
+          <p class="greeting-hint">Open the <strong>menu</strong> to access your features.</p>
+          <div class="greeting-status-row">
+            <div class="status-box fine-ok" id="fine-status-box">Fines: $0.00 (Clear)</div>
+            <div class="status-box secure-box">✓ CAS Identity Verified</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATS — always visible after login -->
+      <div class="stats-strip" id="student-stats-strip" style="display:none;">
+        <div class="stat-card highlight">
+          <div class="stat-label">Active Holds</div>
+          <div class="stat-value" id="stu-stat-holds">0</div>
+          <div class="stat-sub">books checked out</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Room Bookings</div>
+          <div class="stat-value" id="stu-stat-rooms">0</div>
+          <div class="stat-sub">reservations active</div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-label">Outstanding Fines</div>
+          <div class="stat-value" id="stu-stat-fines">$0</div>
+          <div class="stat-sub">total owed</div>
+        </div>
+      </div>
+
+      <!-- PANEL: Book a Study Room -->
+      <div id="panel-student-room" class="role-panel hidden">
+        <div class="panel-heading"><h2>🗓 Book a Study Room</h2></div>
+        <div id="room-availability-grid" class="room-status-grid"></div>
+        <div class="card">
+          <div class="simple-form">
+            <div class="form-group">
+              <label>Choose a Study Room</label>
+              <select id="room-select">
+                <option value="Group Discussion Room A">Group Discussion Room A (Smart TV &amp; Whiteboard)</option>
+                <option value="Quiet Study Room 102">Quiet Study Room 102 (Silent Individual Desks)</option>
+                <option value="Tech Lab Room 305">Tech Lab Room 305 (Desktop Engineering Stations)</option>
+                <option value="Creative Hub B">Creative Hub B (Open Collaboration Space)</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <div class="form-group size-1"><label>Date</label><input type="date" id="booking-date" required></div>
+              <div class="form-group size-1"><label>Arrival Time</label><input type="time" id="booking-time" required></div>
+            </div>
+            <div class="form-group">
+              <label>Duration: <span id="duration-readout" style="color:var(--nu-blue-accent);font-weight:800;">1 Hour</span></label>
+              <div style="display:flex;align-items:center;gap:10px;margin-top:.35rem;">
+                <span style="font-size:.72rem;color:var(--text-muted);">15m</span>
+                <input type="range" id="booking-duration" min="15" max="180" step="15" value="60" style="flex:1;accent-color:var(--nu-blue-accent);" oninput="updateDurationReadout(this.value)">
+                <span style="font-size:.72rem;color:var(--text-muted);">3h</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Invite Group Members <span class="light-text">(Optional)</span></label>
+              <input type="text" id="group-emails" placeholder="e.g. sam@univ.edu, ben@univ.edu">
+              <small style="color:var(--text-muted);font-size:.72rem;display:block;margin-top:.3rem;">📬 Invited members will receive a notification directly on their SmartLib dashboard. Only registered student emails are accepted.</small>
+            </div>
+            <button onclick="bookStudyRoom()" class="btn btn-blue w-100">Confirm Room Booking</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL: Active Passes & Holds -->
+      <div id="panel-student-passes" class="role-panel hidden">
+        <div class="panel-heading"><h2>🎟 Active Passes &amp; Holds</h2></div>
+        <div class="card">
+          <div id="student-passes-container" class="passes-list"></div>
+        </div>
+      </div>
+
+      <!-- PANEL: Notifications -->
+      <div id="panel-student-notifs" class="role-panel hidden">
+        <div class="panel-heading" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
+          <h2>🔔 Notifications &amp; Invitations</h2>
+          <button onclick="markAllNotifsRead()" class="btn btn-gray" style="font-size:.75rem;padding:.35rem .75rem;">Mark All Read</button>
+        </div>
+        <div class="card">
+          <div id="student-notifs-container" class="passes-list"></div>
+        </div>
+      </div>
+
+      <!-- PANEL: Digital Repository -->
+      <div id="panel-student-digital" class="role-panel hidden">
+        <div class="panel-heading"><h2>📂 Digital Research Repository</h2></div>
+        <div class="card">
+          <div id="digital-papers-list"></div>
+        </div>
+      </div>
+
+      <!-- PANEL: Pay Fine -->
+      <div id="panel-student-fine" class="role-panel hidden">
+        <div class="panel-heading"><h2>💳 Pay Outstanding Fine</h2></div>
+        <div id="student-fine-payment-card" class="fine-payment-card">
+          <div class="fpc-header">
+            <h3>⚠️ Outstanding Balance Due</h3>
+            <p>Your account holds an active overdue balance. Settle below to restore hold access.</p>
+          </div>
+          <div class="fpc-body">
+            <div>
+              <div class="fine-amount-display" id="payment-fine-amount">$0.00</div>
+              <div class="fine-note">Accounts lock when balance exceeds $10.00.</div>
+            </div>
+            <button onclick="executeFinePayment()" class="btn btn-gold size-lg">💳 Settle via Student Account</button>
+          </div>
+        </div>
+        <div class="overdue-alert-banner" style="margin-top:1rem;">
+          <div class="alert-icon">⚠️</div>
+          <p><strong>Overdue Book Notice:</strong> If any of your borrowed books are overdue, please proceed to the Librarian Desk for payment processing. Unpaid fines exceeding <strong>$10.00</strong> will restrict all hold operations.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ═══════════════ LIBRARIAN VIEW ═══════════════ -->
+    <section id="librarian-view" class="view-section">
+
+      <!-- GREETING -->
+      <div class="role-greeting" id="librarian-greeting">
+        <div class="greeting-avatar-wrap">
+          <div class="greeting-avatar lib-avatar" id="greeting-avatar-lib">NU</div>
+        </div>
+        <div class="greeting-body">
+          <h1 id="greeting-name-lib">Welcome, Librarian!</h1>
+          <p class="greeting-hint">Open the <strong>menu</strong> to manage the catalog, loans, and fines.</p>
+        </div>
+      </div>
+
+      <!-- PANEL: Add Books -->
+      <div id="panel-lib-books" class="role-panel hidden">
+        <div class="panel-heading"><h2>📥 Add a New Book Record</h2></div>
+        <div class="card max-width-600">
+          <div class="card-header">
+            <p>Enter a 10 or 13-digit ISBN to auto-fetch metadata from the Open Library API, then save to catalog.</p>
+          </div>
+          <div class="fetch-input-bar">
+            <input type="text" id="isbn-search-field" placeholder="Enter ISBN (e.g. 9780132350884)">
+            <button onclick="fetchBookMetadata()" class="btn btn-gold">Fetch Metadata</button>
+          </div>
+          <div class="form-divider"></div>
+          <div class="simple-form">
+            <div class="form-group"><label>Book Title</label><input type="text" id="meta-title" class="disabled-input" readonly placeholder="Awaiting database sync…"></div>
+            <div class="form-group"><label>Author</label><input type="text" id="meta-author" class="disabled-input" readonly placeholder="Awaiting database sync…"></div>
+            <div class="form-row">
+              <div class="form-group size-1"><label>Publisher</label><input type="text" id="meta-publisher" class="disabled-input" readonly placeholder="Awaiting…"></div>
+              <div class="form-group size-1"><label>Publication Year</label><input type="text" id="meta-pubdate" class="disabled-input" readonly placeholder="Awaiting…"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group size-1"><label>Language</label><input type="text" id="meta-language" class="disabled-input" readonly placeholder="Awaiting…"></div>
+              <div class="form-group size-1">
+                <label>Item Rate Class</label>
+                <select id="meta-rate-class" style="padding:.6rem;border:1px solid var(--border-gray);border-radius:6px;font-size:.85rem;font-family:var(--font-body);">
+                  <option value="STANDARD">Standard ($1.00/day overdue)</option>
+                  <option value="HIGH_PRIORITY">High-Priority ($2.50/day overdue)</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Media Class</label>
+              <select id="meta-mediaclass" style="padding:.6rem;border:1px solid var(--border-gray);border-radius:6px;font-size:.85rem;font-family:var(--font-body);">
+                <option value="PHYSICAL">Physical Book</option>
+                <option value="DIGITAL">Digital / PDF</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Genre / Subjects <span style="font-size:.7rem;color:var(--text-muted);font-weight:400;">(auto-filled from database)</span></label><input type="text" id="meta-genre" class="disabled-input" readonly placeholder="Awaiting database sync…"></div>
+            <input type="hidden" id="meta-hidden-isbn">
+            <div class="form-footer-buttons">
+              <button onclick="clearBookForm()" class="btn btn-gray">Clear</button>
+              <button onclick="saveNewBookToCatalog()" class="btn btn-blue">Save to Catalog</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL: Edit Books -->
+      <div id="panel-lib-edit" class="role-panel hidden">
+        <div class="panel-heading"><h2>✏️ Edit Existing Book Records</h2></div>
+        <div class="card">
+          <div class="card-header"><p>Update title, author, publisher, genre, rate class, or media class for any catalog entry.</p></div>
+          <div id="lib-edit-catalog-list" class="passes-list"></div>
+        </div>
+      </div>
+
+      <!-- PANEL: Delete Records -->
+      <div id="panel-lib-records" class="role-panel hidden">
+        <div class="panel-heading"><h2>🗑 Delete Catalog Records</h2></div>
+        <div class="card">
+          <div class="card-header"><p>Permanently remove books, reservations, loans, fines, or room bookings from the system.</p></div>
+          <div class="sub-tab-bar" style="margin-bottom:1rem;">
+            <button onclick="switchDeleteSubTab('del-books')" id="del-subtab-books" class="sub-btn active">📚 Books</button>
+            <button onclick="switchDeleteSubTab('del-reservations')" id="del-subtab-reservations" class="sub-btn">📋 Reservations</button>
+            <button onclick="switchDeleteSubTab('del-loans')" id="del-subtab-loans" class="sub-btn">📖 Loans</button>
+            <button onclick="switchDeleteSubTab('del-fines')" id="del-subtab-fines" class="sub-btn">💸 Fines</button>
+            <button onclick="switchDeleteSubTab('del-rooms')" id="del-subtab-rooms" class="sub-btn">🏢 Room Bookings</button>
+          </div>
+          <div id="del-books-panel"><div id="lib-delete-catalog-list" class="passes-list"></div></div>
+          <div id="del-reservations-panel" class="hidden"><div id="lib-delete-reservations-list" class="passes-list"></div></div>
+          <div id="del-loans-panel" class="hidden"><div id="lib-delete-loans-list" class="passes-list"></div></div>
+          <div id="del-fines-panel" class="hidden"><div id="lib-delete-fines-list" class="passes-list"></div></div>
+          <div id="del-rooms-panel" class="hidden"><div id="lib-delete-rooms-list" class="passes-list"></div></div>
+        </div>
+      </div>
+
+      <!-- PANEL: Active Loans -->
+      <div id="panel-lib-loans" class="role-panel hidden">
+        <div class="panel-heading" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
+          <h2>📖 Active Loans &amp; Circulation</h2>
+          <div style="display:flex;align-items:center;gap:.5rem;">
+            <label style="font-size:.78rem;font-weight:700;color:var(--text-dark);">Show:</label>
+            <select id="loans-filter" onchange="renderLoansTable()" style="padding:.4rem .75rem;border-radius:6px;border:1px solid var(--border-gray);font-size:.8rem;font-weight:600;background:white;cursor:pointer;font-family:var(--font-body);">
+              <option value="ALL">All Loans</option>
+              <option value="OVERDUE">⚠️ Overdue Only</option>
+            </select>
+          </div>
+        </div>
+        <div class="card">
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Book Title / Rate</th><th>Student</th>
+                  <th style="text-align:center;">Checkout Date</th><th style="text-align:center;">Due Date</th>
+                  <th style="text-align:center;">Status</th><th style="text-align:right;">Accrued Fine</th>
+                  <th style="text-align:center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="lib-loans-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL: Fines & Rooms -->
+      <div id="panel-lib-fines-rooms" class="role-panel hidden">
+        <div class="panel-heading"><h2>⚠️ Fines &amp; Room Reservations</h2></div>
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-header"><h3>Active Room Reservations</h3><p>All current student bookings. Cancel if policies are violated.</p></div>
+            <div id="lib-rooms-container" class="passes-list"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>Fine Configuration</h3><p>Adjust per-day fine rates applied to overdue items.</p></div>
+            <div class="fine-settings-grid">
+              <div class="fine-setting-item"><label>Standard Rate ($/day)</label><input type="number" id="fine-rate-standard" value="1.00" min="0" step="0.25"></div>
+              <div class="fine-setting-item"><label>High-Priority Rate ($/day)</label><input type="number" id="fine-rate-high" value="2.50" min="0" step="0.25"></div>
+              <div class="fine-setting-item"><label>Grace Period Standard (days)</label><input type="number" id="grace-standard" value="10" min="1" step="1"></div>
+              <div class="fine-setting-item"><label>Grace Period High-Priority (days)</label><input type="number" id="grace-high" value="4" min="1" step="1"></div>
+            </div>
+            <button onclick="saveFineConfig()" class="btn btn-blue" style="margin-top:1rem;">Save Configuration</button>
+            <div class="card-header" style="margin-top:1.5rem;"><h3>Issue Manual Fine</h3><p>Apply a penalty in any amount to a student account.</p></div>
+            <div class="fetch-input-bar" style="flex-wrap:wrap;gap:.5rem;">
+              <input type="email" id="fine-student-email" placeholder="studentname@univ.edu" style="flex:2;min-width:180px;">
+              <input type="number" id="fine-manual-amount" placeholder="Amount ($)" min="1" step="1" style="flex:1;min-width:110px;padding:.6rem .8rem;border:1px solid var(--border-gray);border-radius:8px;font-size:.85rem;font-family:var(--font-body);">
+              <button onclick="applyLateFine()" class="btn btn-red">Issue Fine</button>
+            </div>
+            <h4 class="sub-header-text">Students with Active Penalties</h4>
+            <div id="lib-fines-container" class="passes-list"></div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ═══════════════ ADMIN VIEW ═══════════════ -->
+    <section id="admin-view" class="view-section">
+
+      <!-- GREETING -->
+      <div class="role-greeting" id="admin-greeting">
+        <div class="greeting-avatar-wrap">
+          <div class="greeting-avatar admin-avatar" id="greeting-avatar-adm">NU</div>
+        </div>
+        <div class="greeting-body">
+          <h1 id="greeting-name-adm">Welcome, Administrator!</h1>
+          <p class="greeting-hint">Open the <strong>menu</strong> to access system controls and reports.</p>
+        </div>
+      </div>
+
+      <!-- Stats Strip — always visible -->
+      <div class="stats-strip" id="admin-stats-strip"></div>
+
+      <!-- PANEL: System Transaction Log -->
+      <div id="panel-admin-logs" class="role-panel hidden">
+        <div class="panel-heading"><h2>📋 System Transaction Log</h2></div>
+        <div class="card">
+          <div class="card-header"><p>Live audit trail of all operations.</p></div>
+          <div id="admin-logs-container" style="max-height:480px;overflow-y:auto;"></div>
+        </div>
+      </div>
+
+      <!-- PANEL: Registered User Profiles -->
+      <div id="panel-admin-users" class="role-panel hidden">
+        <div class="panel-heading"><h2>👥 Registered User Profiles</h2></div>
+        <div class="card">
+          <div class="card-header"><p>All accounts in the CAS identity system.</p></div>
+          <div class="table-wrapper" style="max-height:480px;overflow-y:auto;">
+            <table>
+              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th style="text-align:right;">Outstanding Fines</th><th style="text-align:center;">Permissions</th><th style="text-align:center;">Action</th></tr></thead>
+              <tbody id="admin-users-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL: Monthly Activity Summary -->
+      <div id="panel-admin-report" class="role-panel hidden">
+        <div class="panel-heading"><h2>📊 Monthly Activity Summary</h2></div>
+        <div class="card">
+          <div class="card-header"><p>Generate a comprehensive visual system report with activity graphs.</p></div>
+          <button onclick="generateSystemReport()" class="btn btn-blue">Compile Monthly Activity Summary</button>
+          <div id="admin-report-box" class="hidden" style="margin-top:1.25rem;">
+            <div id="admin-report-charts" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.25rem;margin-bottom:1.5rem;"></div>
+            <pre id="admin-report-text" class="terminal-box" style="margin-top:0;"></pre>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer class="app-academic-footer">
+    <div class="footer-divider-line"></div>
+    <p>© 2026 National University. All Rights Reserved.</p>
+    <p class="footer-tagline">Excellence · Integrity · Modernized Discovery Infrastructure</p>
+  </footer>
+</div>
+
+<!-- LOGIN DRAWER -->
+<section id="login-drawer-overlay" class="drawer-overlay hidden">
+  <div class="drawer-backdrop" onclick="closeLoginDrawer()"></div>
+  <div class="drawer-panel">
+    <button class="drawer-close-btn" onclick="closeLoginDrawer()">&times;</button>
+    <div class="drawer-header">
+      <h2>NU Central Authentication</h2>
+      <p>Secure identity gateway via CAS protocol</p>
+    </div>
+    <div class="drawer-toggle-row">
+      <button onclick="switchLoginMode('LOGIN')" id="toggle-btn-login" class="toggle-tab active">Sign In</button>
+      <button onclick="switchLoginMode('REGISTER')" id="toggle-btn-register" class="toggle-tab">Create Account</button>
+    </div>
+    <!-- Login Form -->
+    <div id="form-login" class="simple-form drawer-form">
+      <div class="form-group">
+        <label>University Email</label>
+        <input type="email" id="login-email" placeholder="username@univ.edu">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="password-wrapper">
+          <input type="password" id="login-password" placeholder="Enter your password" style="width:100%;padding:.65rem .85rem;border-radius:8px;border:1px solid var(--border-gray);font-size:.88rem;outline:none;background:var(--canvas-bg);transition:all .15s;font-family:var(--font-body);" onkeydown="if(event.key==='Enter')handleLoginSubmit()">
+          <button type="button" class="pw-toggle-btn" onclick="togglePwVisibility('login-password',this)" title="Show/hide password">👁</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>User Role</label>
+        <select id="login-role">
+          <option value="Student">Student Explorer</option>
+          <option value="Librarian">University Librarian</option>
+          <option value="Admin">System Administrator</option>
+        </select>
+      </div>
+      <div class="info-alert-box"><strong>New to SmartLib?</strong> Switch to "Create Account" above to register your profile card.</div>
+      <button onclick="handleLoginSubmit()" class="btn btn-blue w-100 size-lg">Verify Security Handshake</button>
+    </div>
+    <!-- Register Form -->
+    <div id="form-register" class="simple-form drawer-form hidden">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="reg-name" placeholder="Jane Smith">
+      </div>
+      <div class="form-group">
+        <label>University Email</label>
+        <input type="email" id="reg-email" placeholder="janesmith@univ.edu">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="password-wrapper">
+          <input type="password" id="reg-password" placeholder="Create a password (min. 8 characters)" style="width:100%;padding:.65rem .85rem;border-radius:8px;border:1px solid var(--border-gray);font-size:.88rem;outline:none;background:var(--canvas-bg);transition:all .15s;font-family:var(--font-body);" oninput="checkPasswordStrength(this.value)">
+          <button type="button" class="pw-toggle-btn" onclick="togglePwVisibility('reg-password',this)" title="Show/hide password">👁</button>
+        </div>
+        <div class="pw-strength-bar"><div class="pw-strength-fill" id="pw-strength-fill"></div></div>
+        <div class="pw-strength-label" id="pw-strength-label"></div>
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <div class="password-wrapper">
+          <input type="password" id="reg-password-confirm" placeholder="Re-enter your password" style="width:100%;padding:.65rem .85rem;border-radius:8px;border:1px solid var(--border-gray);font-size:.88rem;outline:none;background:var(--canvas-bg);transition:all .15s;font-family:var(--font-body);">
+          <button type="button" class="pw-toggle-btn" onclick="togglePwVisibility('reg-password-confirm',this)" title="Show/hide password">👁</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Account Role</label>
+        <select id="reg-role">
+          <option value="Student">Student Explorer</option>
+          <option value="Librarian">University Librarian</option>
+          <option value="Admin">System Administrator</option>
+        </select>
+      </div>
+      <button onclick="handleRegisterSubmit()" class="btn btn-gold w-100 size-lg">Register My Profile</button>
+    </div>
+  </div>
+</section>
+
+<!-- MODAL -->
+<div id="app-modal" class="modal-overlay hidden">
+  <div class="modal-window">
+    <span class="modal-close-anchor" onclick="closeModal()">&times;</span>
+    <div id="modal-content-root"></div>
+  </div>
+</div>
+
+</script>
+<script src="firebase-backend.js"></script>
+</body>
+</html>
