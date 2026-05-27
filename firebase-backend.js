@@ -1052,7 +1052,7 @@ window.libDeleteRoomBooking = async function (resId) {
    ════════════════════════════════════════════════════════════════ */
 
 // Run bootstrap after DOM is ready (same timing as the original DOMContentLoaded)
-document.addEventListener('load', () => {
+window.addEventListener('load', () => {
   bootstrapFromFirestore().then(() => {
     setDefaultDate();
     // Restore session from sessionStorage if user refreshed the page
